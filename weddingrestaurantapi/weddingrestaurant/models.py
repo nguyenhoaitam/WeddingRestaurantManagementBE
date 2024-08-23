@@ -51,9 +51,13 @@ class Feedback(models.Model):
 class WeddingHall(models.Model):
     name = models.CharField(max_length=100, null=False)
     description = RichTextField(null=True, blank=True)
-    image = CloudinaryField()
     capacity = models.IntegerField(null=False)
     is_active = models.BooleanField(default=True)
+
+
+class WeddingHallImage(models.Model):
+    wedding_hall = models.ForeignKey(WeddingHall, on_delete=models.CASCADE)
+    image = CloudinaryField()
 
 
 class WeddingHallPrice(models.Model):
@@ -72,15 +76,11 @@ class WeddingHallPrice(models.Model):
     price = models.FloatField()
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
+    wedding_hall = models.ForeignKey(WeddingHall, on_delete=models.CASCADE)
 
 
 class EventType(models.Model):
     name = models.CharField(max_length=50, null=False)
-
-
-class Payments(models.Model):
-    method = models.CharField(max_length=50, null=False)
-    date = models.DateTimeField()
 
 
 class BaseModel(models.Model):
@@ -97,17 +97,8 @@ class Service(BaseModel):
     name = models.CharField(max_length=50, null=False)
 
 
-class ServiceBookingDetail(models.Model):
-    quantity = models.IntegerField(null=False)
-
-
 class Drink(BaseModel):
     name = models.CharField(max_length=50, null=False)
-
-
-class DrinkBookingDetail(models.Model):
-    quantity = models.IntegerField(null=False)
-    unit = models.CharField(max_length=50)
 
 
 class FoodType(models.Model):
@@ -120,15 +111,35 @@ class Food(BaseModel):
     food_type = models.ForeignKey(FoodType, on_delete=models.CASCADE)
 
 
-class FoodBookingDetail(models.Model):
-    quantity = models.IntegerField(null=False)
-
-
 class WeddingBooking(models.Model):
     name = models.CharField(max_length=50, null=False)
     description = RichTextField(null=True, blank=True)
     table_quantity = models.IntegerField()
     rental_date = models.DateField()
+    method = models.CharField(max_length=50, null=False)
     payment_status = models.CharField(max_length=50)
     total_price = models.FloatField()
     created_date = models.DateTimeField(auto_now_add=True)
+    event_type = models.ForeignKey(EventType, on_delete=models.SET_NULL)
+    foods = models.ManyToManyField('Food', through='FoodBookingDetail')
+    drinks = models.ManyToManyField('Drink', through='DrinkBookingDetail')
+    services = models.ManyToManyField('Service', through='ServiceBookingDetail')
+
+
+class ServiceBookingDetail(models.Model):
+    quantity = models.IntegerField(null=False)
+    service = models.ForeignKey(Service, on_delete=models.CASCADE)
+    wedding_booking = models.ForeignKey(WeddingBooking, on_delete=models.PROTECT)
+
+
+class DrinkBookingDetail(models.Model):
+    quantity = models.IntegerField(null=False)
+    unit = models.CharField(max_length=50)
+    drink = models.ForeignKey(Drink, on_delete=models.CASCADE)
+    wedding_booking = models.ForeignKey(WeddingBooking, on_delete=models.PROTECT)
+
+
+class FoodBookingDetail(models.Model):
+    quantity = models.IntegerField(null=False)
+    food = models.ForeignKey(Food, on_delete=models.CASCADE)
+    wedding_booking = models.ForeignKey(WeddingBooking, on_delete=models.PROTECT)
