@@ -103,8 +103,8 @@ import cloudinary
 
 cloudinary.config(
     cloud_name="dkmurrwq5",
-    api_key="258791527642274",
-    api_secret="Al4HQkF9cU5ybrgo33pIe21TZVw"
+    api_key="628616564284577",
+    api_secret="Z6vfX709UJX8015GB_yIbfLpKvY"
 )
 
 # Password validation
@@ -154,6 +154,8 @@ import pymysql
 
 pymysql.install_as_MySQLdb()
 
+
+# Super user (admin, 123456)
 
 CLIENT_ID = ''
 CLIENT_SECRET = ''

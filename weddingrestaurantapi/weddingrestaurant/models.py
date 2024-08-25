@@ -16,61 +16,69 @@ class User(AbstractUser):  # Người dùng
     phone = models.CharField(max_length=10, null=False)
     user_role = models.ForeignKey(UserRole, on_delete=models.PROTECT, null=True)
 
+    def has_role(self, required_role):
+        return self.user_role == required_role
+
+    def save(self, *args, **kwargs):
+        if not self.pk and self.is_superuser:
+            self.user_role = UserRole.objects.get(name='admin')
+        super().save(*args, **kwargs)
+
 
 class Staff(models.Model):  # Nhân viên
+    GENDER_CHOICE = [
+        ('Nam', 'Nam'),
+        ('Nữ', 'Nữ')
+    ]
     full_name = models.CharField(max_length=100, null=False)
     position = models.CharField(max_length=30, null=False)
     salary = models.FloatField()
     address = models.CharField(max_length=150, null=False)
-    gender = models.CharField(max_length=15, null=False)
+    gender = models.CharField(max_length=15, null=False, choices=GENDER_CHOICE)
     dob = models.DateField(null=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, primary_key=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
 
     def __str__(self):
         return self.full_name
 
 
 class Customer(models.Model):  # Khách hàng
+    GENDER_CHOICE = [
+        ('Nam', 'Nam'),
+        ('Nữ', 'Nữ')
+    ]
     full_name = models.CharField(max_length=100, null=False)
     address = models.CharField(max_length=150, null=False)
-    gender = models.CharField(max_length=15, null=False)
+    gender = models.CharField(max_length=15, null=False, choices=GENDER_CHOICE)
     dob = models.DateField(null=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, primary_key=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
 
     def __str__(self):
-        return self.name
+        return self.full_name
 
 
-class Feedback(models.Model):
-    content = RichTextField(null=True, blank=True)
-    rating = models.IntegerField(null=False)
-    created_date = models.DateTimeField(auto_now_add=True)
-    updated_date = models.DateTimeField(auto_now=True)
-
-
-class WeddingHall(models.Model):
+class WeddingHall(models.Model):  # Sảnh tiệc
     name = models.CharField(max_length=100, null=False)
     description = RichTextField(null=True, blank=True)
     capacity = models.IntegerField(null=False)
     is_active = models.BooleanField(default=True)
 
+    def __str__(self):
+        return self.name
 
-class WeddingHallImage(models.Model):
+
+class WeddingHallImage(models.Model):  # Ảnh của sảnh tiệc
+    path = CloudinaryField()
     wedding_hall = models.ForeignKey(WeddingHall, on_delete=models.CASCADE)
-    image = CloudinaryField()
 
 
-class WeddingHallPrice(models.Model):
-    MORNING = 1
-    NOON = 2
-    EVENING = 3
-
+class WeddingHallPrice(models.Model):  # Giá của sảnh tiệc
     TIME_CHOICES = [
-        (MORNING, 'Morning'),
-        (NOON, 'Noon'),
-        (EVENING, 'Evening'),
+        ('Sáng', 'Sáng'),
+        ('Trưa', 'Trưa'),
+        ('Tối', 'Tối'),
     ]
-    time = models.CharField(null=False, choices=TIME_CHOICES)
+    time = models.CharField(max_length=20, null=False, choices=TIME_CHOICES)
     is_weekend = models.BooleanField(default=False)
     is_holiday = models.BooleanField(default=False)
     price = models.FloatField()
@@ -78,9 +86,15 @@ class WeddingHallPrice(models.Model):
     updated_date = models.DateTimeField(auto_now=True)
     wedding_hall = models.ForeignKey(WeddingHall, on_delete=models.CASCADE)
 
+    def __str__(self):
+        return self.price
 
-class EventType(models.Model):
+
+class EventType(models.Model):  # Loại tiệc
     name = models.CharField(max_length=50, null=False)
+
+    def __str__(self):
+        return self.name
 
 
 class BaseModel(models.Model):
@@ -93,53 +107,88 @@ class BaseModel(models.Model):
         abstract = True
 
 
-class Service(BaseModel):
+class Service(BaseModel):  # Dịch vụ
     name = models.CharField(max_length=50, null=False)
 
+    def __str__(self):
+        return self.name
 
-class Drink(BaseModel):
+
+class Drink(BaseModel):  # Nước uống
     name = models.CharField(max_length=50, null=False)
 
+    def __str__(self):
+        return self.name
 
-class FoodType(models.Model):
+
+class FoodType(models.Model):  # Loại đồ ăn
     name = models.CharField(max_length=50, null=False)
 
+    def __str__(self):
+        return self.name
 
-class Food(BaseModel):
+
+class Food(BaseModel):  # Đồ ăn
     name = models.CharField(max_length=50, null=False)
-    is_vagetarian = models.BooleanField(default=False)
+    is_vegetarian = models.BooleanField(default=False)
     food_type = models.ForeignKey(FoodType, on_delete=models.CASCADE)
 
+    def __str__(self):
+        return self.name
 
-class WeddingBooking(models.Model):
+
+class WeddingBooking(models.Model):  # Đơn đặt tiệc
     name = models.CharField(max_length=50, null=False)
     description = RichTextField(null=True, blank=True)
     table_quantity = models.IntegerField()
     rental_date = models.DateField()
-    method = models.CharField(max_length=50, null=False)
+    payment_method = models.CharField(max_length=50, null=False)
     payment_status = models.CharField(max_length=50)
     total_price = models.FloatField()
     created_date = models.DateTimeField(auto_now_add=True)
-    event_type = models.ForeignKey(EventType, on_delete=models.SET_NULL)
+    event_type = models.ForeignKey(EventType, on_delete=models.SET_NULL, null=True)
     foods = models.ManyToManyField('Food', through='FoodBookingDetail')
     drinks = models.ManyToManyField('Drink', through='DrinkBookingDetail')
     services = models.ManyToManyField('Service', through='ServiceBookingDetail')
 
+    def __str__(self):
+        return self.name
 
-class ServiceBookingDetail(models.Model):
+
+class Feedback(models.Model):  # Phản hồi của khách hàng
+    RATING_CHOICES = [
+        (1, 'Rất tệ'),
+        (2, 'Tệ'),
+        (3, 'Bình thường'),
+        (4, 'Tốt'),
+        (5, 'Rất tốt'),
+    ]
+
+    content = RichTextField(null=True, blank=True)
+    rating = models.IntegerField(choices=RATING_CHOICES, null=False)
+    created_date = models.DateTimeField(auto_now_add=True)
+    updated_date = models.DateTimeField(auto_now=True)
+    wedding_booking = models.ForeignKey(WeddingBooking, on_delete=models.CASCADE)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.content
+
+
+class ServiceBookingDetail(models.Model):  # Chi tiết dịch vụ của đơn đặt tiệc
     quantity = models.IntegerField(null=False)
     service = models.ForeignKey(Service, on_delete=models.CASCADE)
     wedding_booking = models.ForeignKey(WeddingBooking, on_delete=models.PROTECT)
 
 
-class DrinkBookingDetail(models.Model):
+class DrinkBookingDetail(models.Model):  # Chi tiết nước uống của đơn đặt tiệc
     quantity = models.IntegerField(null=False)
     unit = models.CharField(max_length=50)
     drink = models.ForeignKey(Drink, on_delete=models.CASCADE)
     wedding_booking = models.ForeignKey(WeddingBooking, on_delete=models.PROTECT)
 
 
-class FoodBookingDetail(models.Model):
+class FoodBookingDetail(models.Model): # Chi tiết đồ ăn của đơn đặt tiệc
     quantity = models.IntegerField(null=False)
     food = models.ForeignKey(Food, on_delete=models.CASCADE)
     wedding_booking = models.ForeignKey(WeddingBooking, on_delete=models.PROTECT)
