@@ -143,7 +143,7 @@ STATIC_URL = 'static/'
 
 CKEDITOR_UPLOAD_PATH = "ckeditor/images/"
 
-MEDIA_ROOT = '%s/courses/static/' % BASE_DIR
+MEDIA_ROOT = '%s/weddingrestaurant/static/' % BASE_DIR
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

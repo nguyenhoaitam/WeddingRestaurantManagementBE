@@ -9,7 +9,7 @@ from ckeditor_uploader.widgets import CKEditorUploadingWidget
 
 
 class MyUserAdmin(admin.ModelAdmin):
-    list_display = ['id', 'username', 'first_name', 'last_name', 'email', 'phone', 'user_role']
+    list_display = ['id', 'username', 'first_name', 'last_name', 'email', 'avatar', 'phone', 'user_role']
     search_fields = ['username', 'first_name', 'last_name']
     list_filter = ['user_role']
     readonly_fields = ['user_avatar']
