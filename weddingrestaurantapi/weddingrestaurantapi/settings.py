@@ -54,8 +54,6 @@ REST_FRAMEWORK = {
 
 AUTH_USER_MODEL = 'weddingrestaurant.User'
 
-OAUTH2_PROVIDER = {'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.JSONOAuthLibCore'}
-
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -157,5 +155,5 @@ pymysql.install_as_MySQLdb()
 
 # Super user (admin, 123456)
 
-CLIENT_ID = ''
-CLIENT_SECRET = ''
+CLIENT_ID = 'jzEQTDJqG0KWm8taVGLhZNKaUku6U2pvUvZDs5ue'
+CLIENT_SECRET = 'wfnse8NMa0Zho0GooT7UuzymJMXRwx0Zr2dvAjp8e6ogBGCxxbq2OiTmKs8a0vzDYAoixyW7EVJbqXoRDI3oG7aDDAF1UnwAtfkkRoL9TsNlCywvRMZ9QSVc3IGGkHJO'
