@@ -59,7 +59,7 @@ class MyWeddingHallImageAdmin(admin.ModelAdmin):
 
 
 class MyWeddingHallPriceAdmin(admin.ModelAdmin):
-    list_display = ['id', 'wedding_hall', 'time', 'is_weekend', 'is_holiday', 'price', 'updated_date']
+    list_display = ['id', 'wedding_hall', 'time', 'is_weekend', 'price', 'updated_date']
     list_filter = ['wedding_hall', 'time']
 
 

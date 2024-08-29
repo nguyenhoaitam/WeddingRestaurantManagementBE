@@ -24,9 +24,9 @@ SECRET_KEY = 'django-insecure-^nw_u-z1$47=&-&px3ma%1j#kx719l!ir6ieegwf*8$%5t*npd
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['192.168.1.17']
 
-# OAUTH2_PROVIDER = {'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.JSONOAuthLibCore'}
+OAUTH2_PROVIDER = {'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.JSONOAuthLibCore'}
 
 # Application definition
 
@@ -44,7 +44,11 @@ INSTALLED_APPS = [
     'drf_yasg',
     'oauth2_provider',
     'cloudinary',
+    'corsheaders',
 ]
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -62,6 +66,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'weddingrestaurantapi.urls'
@@ -151,7 +156,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 import pymysql
 
 pymysql.install_as_MySQLdb()
-
 
 # Super user (admin, 123456)
 

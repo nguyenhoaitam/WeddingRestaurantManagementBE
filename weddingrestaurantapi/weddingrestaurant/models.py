@@ -48,9 +48,9 @@ class Customer(models.Model):  # Khách hàng
         ('Nữ', 'Nữ')
     ]
     full_name = models.CharField(max_length=100, null=False)
-    address = models.CharField(max_length=150, null=False)
-    gender = models.CharField(max_length=15, null=False, choices=GENDER_CHOICE)
-    dob = models.DateField(null=False)
+    address = models.CharField(max_length=150, null=True, blank=True)
+    gender = models.CharField(max_length=15, null=True, blank=True, choices=GENDER_CHOICE)
+    dob = models.DateField(null=True, blank=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
 
     def __str__(self):
@@ -66,10 +66,16 @@ class WeddingHall(models.Model):  # Sảnh tiệc
     def __str__(self):
         return self.name
 
+    def get_images(self):
+        return self.weddinghallimage_set.all()
+
 
 class WeddingHallImage(models.Model):  # Ảnh của sảnh tiệc
     path = CloudinaryField()
     wedding_hall = models.ForeignKey(WeddingHall, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"Ảnh của service {self.wedding_hall}"
 
 
 class WeddingHallPrice(models.Model):  # Giá của sảnh tiệc
@@ -80,14 +86,13 @@ class WeddingHallPrice(models.Model):  # Giá của sảnh tiệc
     ]
     time = models.CharField(max_length=20, null=False, choices=TIME_CHOICES)
     is_weekend = models.BooleanField(default=False)
-    is_holiday = models.BooleanField(default=False)
     price = models.FloatField()
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
     wedding_hall = models.ForeignKey(WeddingHall, on_delete=models.CASCADE)
 
     def __str__(self):
-        return self.price
+        return f"{self.price:.2f}"
 
 
 class EventType(models.Model):  # Loại tiệc

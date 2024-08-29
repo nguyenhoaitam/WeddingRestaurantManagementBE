@@ -2,7 +2,7 @@ from django.contrib.auth.hashers import make_password
 from rest_framework import viewsets, generics, parsers, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-
+from weddingrestaurant import paginators
 from weddingrestaurant.models import User, UserRole, Staff, WeddingHall, WeddingHallImage, WeddingHallPrice, EventType, \
     Service, Drink, FoodType, Food, WeddingBooking, Feedback
 from weddingrestaurant import serializers
@@ -53,9 +53,19 @@ class CustomerViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPI
     serializer_class = serializers.CustomerSerializer
 
 
-class WeddingHallViewSet(viewsets.ViewSet, generics.ListAPIView):
-    queryset = WeddingHall.objects.filter(is_active=True)
+class WeddingHallViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
+    queryset = WeddingHall.objects.filter(is_active=True).order_by('name')
     serializer_class = serializers.WeddingHallSerializer
+    # pagination_class = paginators.HallPaginator
+
+    def get_queryset(self):
+        queryset = self.queryset
+
+        if self.action.__eq__('list'):
+            q = self.request.query_params.get('q')
+            if q:
+                queryset = queryset.filter(name__icontains=q)
+        return queryset
 
 
 class WeddingHallImageViewSet(viewsets.ViewSet, generics.ListAPIView):
@@ -77,10 +87,28 @@ class ServiceViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Service.objects.filter(is_active=True)
     serializer_class = serializers.ServiceSerializer
 
+    def get_queryset(self):
+        queryset = self.queryset
+
+        if self.action.__eq__('list'):
+            q = self.request.query_params.get('q')
+            if q:
+                queryset = queryset.filter(name__icontains=q)
+        return queryset
+
 
 class DrinkViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Drink.objects.filter(is_active=True)
     serializer_class = serializers.DrinkSerializer
+
+    def get_queryset(self):
+        queryset = self.queryset
+
+        if self.action.__eq__('list'):
+            q = self.request.query_params.get('q')
+            if q:
+                queryset = queryset.filter(name__icontains=q)
+        return queryset
 
 
 class FoodTypeViewSet(viewsets.ViewSet, generics.ListAPIView):
@@ -91,6 +119,20 @@ class FoodTypeViewSet(viewsets.ViewSet, generics.ListAPIView):
 class FoodViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Food.objects.filter(is_active=True)
     serializer_class = serializers.FoodSerializer
+
+    def get_queryset(self):
+        queryset = self.queryset
+
+        if self.action.__eq__('list'):
+            q = self.request.query_params.get('q')
+            if q:
+                queryset = queryset.filter(name__icontains=q)
+
+            foodtype_id = self.request.query_params.get('foodtype_id')
+            if foodtype_id:
+                queryset = queryset.filter(food_type_id=foodtype_id)
+
+        return queryset
 
 
 class WeddingBookingViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView, generics.DestroyAPIView):

@@ -58,13 +58,14 @@ class CustomerSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class WeddingHallSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = WeddingHall
-        fields = '__all__'
-
-
 class WeddingHallImageSerializer(serializers.ModelSerializer):
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['path'] = instance.path.url
+
+        return rep
+
     class Meta:
         model = WeddingHallImage
         fields = '__all__'
@@ -74,6 +75,18 @@ class WeddingHallPriceSerializer(serializers.ModelSerializer):
     class Meta:
         model = WeddingHallPrice
         fields = '__all__'
+
+
+class WeddingHallSerializer(serializers.ModelSerializer):
+    images = serializers.SerializerMethodField()
+    prices = WeddingHallPriceSerializer(many=True, source='weddinghallprice_set')
+
+    def get_images(self, obj):
+        return [image.path.url for image in obj.get_images()]
+
+    class Meta:
+        model = WeddingHall
+        fields = ['id', 'name', 'description', 'capacity', 'is_active', 'images', 'prices']
 
 
 class EventTypeSerializer(serializers.ModelSerializer):
