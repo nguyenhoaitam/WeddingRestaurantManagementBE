@@ -26,7 +26,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['192.168.1.17']
 
-OAUTH2_PROVIDER = {'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.JSONOAuthLibCore'}
+# OAUTH2_PROVIDER = {'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.JSONOAuthLibCore'}
 
 # Application definition
 

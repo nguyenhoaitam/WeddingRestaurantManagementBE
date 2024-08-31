@@ -41,6 +41,7 @@ class MyCustomerAdmin(admin.ModelAdmin):
 
 class WeddingHallForm(forms.ModelForm):
     description = forms.CharField(widget=CKEditorUploadingWidget)
+
     class Meta:
         model = WeddingHall
         fields = '__all__'
@@ -56,6 +57,15 @@ class MyWeddingHallAdmin(admin.ModelAdmin):
 class MyWeddingHallImageAdmin(admin.ModelAdmin):
     list_display = ['id', 'wedding_hall', 'path']
     list_filter = ['wedding_hall']
+    readonly_fields = ['hall_image']
+
+    def hall_image(self, weddinghall):
+        if weddinghall.path:
+            if type(weddinghall.path) is cloudinary.CloudinaryResource:
+                return mark_safe(f"<img width='100' src='{weddinghall.path.url}' />")
+            return mark_safe(f"<img width='100' src='/static/{weddinghall.name}' />")
+        else:
+            return "No image"
 
 
 class MyWeddingHallPriceAdmin(admin.ModelAdmin):
@@ -71,12 +81,30 @@ class MyServiceAdmin(admin.ModelAdmin):
     list_display = ['id', 'name', 'price', 'description', 'image', 'is_active']
     search_fields = ['name']
     list_filter = ['is_active']
+    readonly_fields = ['service_image']
+
+    def service_image(self, service):
+        if service.image:
+            if type(service.image) is cloudinary.CloudinaryResource:
+                return mark_safe(f"<img width='100' src='{service.image.url}' />")
+            return mark_safe(f"<img width='100' src='/static/{service.name}' />")
+        else:
+            return "No image"
 
 
 class MyDrinkAdmin(admin.ModelAdmin):
     list_display = ['id', 'name', 'price', 'description', 'image', 'is_active']
     search_fields = ['name']
     list_filter = ['is_active']
+    readonly_fields = ['drink_image']
+
+    def drink_image(self, drink):
+        if drink.image:
+            if type(drink.image) is cloudinary.CloudinaryResource:
+                return mark_safe(f"<img width='100' src='{drink.image.url}' />")
+            return mark_safe(f"<img width='100' src='/static/{drink.name}' />")
+        else:
+            return "No image"
 
 
 class MyFoodTypeAdmin(admin.ModelAdmin):
@@ -88,11 +116,20 @@ class MyFoodAdmin(admin.ModelAdmin):
     list_display = ['id', 'name', 'food_type', 'is_vegetarian', 'price', 'description', 'image', 'is_active']
     search_fields = ['name']
     list_filter = ['is_active']
+    readonly_fields = ['food_image']
+
+    def food_image(self, food):
+        if food.image:
+            if type(food.image) is cloudinary.CloudinaryResource:
+                return mark_safe(f"<img width='100' src='{food.image.url}' />")
+            return mark_safe(f"<img width='100' src='/static/{food.name}' />")
+        else:
+            return "No image"
 
 
 class MyWeddingBookingAdmin(admin.ModelAdmin):
     list_display = ['id', 'name', 'description', 'table_quantity', 'rental_date', 'payment_method', 'payment_status',
-                    'total_price', 'created_date', 'event_type']
+                    'total_price', 'created_date', 'event_type', 'customer']
     search_fields = ['name', 'description']
     list_filter = ['payment_method', 'payment_status', 'event_type']
 
