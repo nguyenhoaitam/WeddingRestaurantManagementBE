@@ -1,4 +1,7 @@
+from datetime import datetime
+
 from django.contrib.auth.hashers import make_password
+from django.utils import timezone
 from rest_framework import viewsets, generics, parsers, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -24,7 +27,7 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
         return [permissions.AllowAny()]
 
-    def create(self, request, *args, **kwargs):
+    def create(self, request, *args, **kwargs):  # first_name: tên last_name: họ
         user_data = request.data.copy()
 
         user_role = UserRole.objects.get(name='customer')
@@ -34,7 +37,11 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
         user_serializer.is_valid(raise_exception=True)
         user = user_serializer.save()
 
-        Customer.objects.create(user=user)
+        first_name = user_data.get('first_name', '')
+        last_name = user_data.get('last_name', '')
+        full_name = f"{last_name} {first_name}".strip()
+
+        Customer.objects.create(user=user, full_name=full_name)
 
         headers = self.get_success_headers(user_serializer.data)
         return Response(user_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
@@ -118,17 +125,89 @@ class CustomerViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPI
 class WeddingHallViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
     queryset = WeddingHall.objects.filter(is_active=True).order_by('name')
     serializer_class = serializers.WeddingHallSerializer
-
     # pagination_class = paginators.HallPaginator
 
     def get_queryset(self):
-        queryset = self.queryset
+        queryset = super().get_queryset()
+        q = self.request.query_params.get('q', None)
+        min_price = self.request.query_params.get('min_price', None)
+        max_price = self.request.query_params.get('max_price', None)
+        time = self.request.query_params.get('time', None)
+        event_date = self.request.query_params.get('event_date', None)
 
-        if self.action.__eq__('list'):
-            q = self.request.query_params.get('q')
-            if q:
-                queryset = queryset.filter(name__icontains=q)
-        return queryset
+        # Xử lý kiểm tra ngày
+        if event_date:
+            event_date = datetime.fromisoformat(event_date)
+        else:
+            event_date = timezone.now()
+
+        is_weekend = event_date.weekday() >= 5  # T7 và CN
+
+        # Lọc theo tên
+        if q:
+            queryset = queryset.filter(name__icontains=q)
+
+        # Lọc theo buổi
+        if time:
+            queryset = queryset.filter(weddinghallprice__time=time)
+
+        # Lọc theo min_price
+        if min_price is not None:
+            queryset = queryset.filter(
+                weddinghallprice__price__gte=min_price,
+                weddinghallprice__is_weekend=is_weekend,
+                weddinghallprice__time=time
+            ).distinct()
+
+        # Lọc theo max_price
+        if max_price is not None:
+            queryset = queryset.filter(
+                weddinghallprice__price__lte=max_price,
+                weddinghallprice__is_weekend=is_weekend,
+                weddinghallprice__time=time
+            ).distinct()
+
+        return queryset.distinct()
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+
+        # Lấy giá cho từng sảnh tiệc
+        for hall in serializer.data:
+            event_date = request.query_params.get('event_date')
+            time = request.query_params.get('time')
+            is_weekend_event = False
+
+            if event_date:
+                event_date = datetime.fromisoformat(event_date)
+                is_weekend_event = event_date.weekday() >= 5  # Xác định nếu là cuối tuần
+            else:
+                # Nếu không có event_date, sử dụng ngày hiện tại
+                event_date = timezone.now()
+                is_weekend_event = event_date.weekday() >= 5  # Cập nhật is_weekend_event
+
+            # Lọc giá theo buổi và ngày
+            if time:
+                hall['prices'] = serializers.WeddingHallPriceSerializer(
+                    WeddingHallPrice.objects.filter(
+                        wedding_hall=hall['id'],
+                        is_weekend=is_weekend_event,
+                        time=time
+                    ),
+                    many=True
+                ).data
+            else:
+                # Nếu không có time, lấy tất cả giá cho ngày hiện tại
+                hall['prices'] = serializers.WeddingHallPriceSerializer(
+                    WeddingHallPrice.objects.filter(
+                        wedding_hall=hall['id'],
+                        is_weekend=is_weekend_event
+                    ),
+                    many=True
+                ).data
+
+        return Response(serializer.data)
 
 
 class WeddingHallImageViewSet(viewsets.ViewSet, generics.ListAPIView):

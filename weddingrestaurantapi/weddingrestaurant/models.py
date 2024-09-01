@@ -75,7 +75,7 @@ class WeddingHallImage(models.Model):  # Ảnh của sảnh tiệc
     wedding_hall = models.ForeignKey(WeddingHall, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f"Ảnh của service {self.wedding_hall}"
+        return f"Ảnh của sảnh {self.wedding_hall}"
 
 
 class WeddingHallPrice(models.Model):  # Giá của sảnh tiệc
