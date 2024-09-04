@@ -37,9 +37,19 @@ class CustomerSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    customer = CustomerSerializer(read_only=True)
-    staff = StaffSerializer(read_only=True)
-    user_role = serializers.CharField(source='user_role.name', read_only=True)
+    customer = serializers.SerializerMethodField()
+    staff = serializers.SerializerMethodField()
+    user_role = serializers.CharField()
+
+    def get_customer(self, obj):
+        if hasattr(obj, 'customer'):
+            return CustomerSerializer(obj.customer).data
+        return None
+
+    def get_staff(self, obj):
+        if hasattr(obj, 'staff'):
+            return StaffSerializer(obj.staff).data
+        return None
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -48,10 +58,12 @@ class UserSerializer(serializers.ModelSerializer):
         if avatar:
             rep['avatar'] = instance.avatar.url
 
-        if hasattr(instance, 'customer'):
-            rep['customer'] = CustomerSerializer(instance.customer).data
-        if hasattr(instance, 'staff'):
-            rep['staff'] = StaffSerializer(instance.staff).data
+        user_role = instance.user_role.name if instance.user_role else None
+
+        if user_role == 'customer':
+            rep.pop('staff', None)
+        elif user_role == 'staff':
+            rep.pop('customer', None)
 
         return rep
 
@@ -172,9 +184,9 @@ class FoodSerializer(serializers.ModelSerializer):
 
 
 class WeddingBookingSerializer(serializers.ModelSerializer):
-    foods = FoodSerializer(many=True)
-    drinks = DrinkSerializer(many=True)
-    services = ServiceSerializer(many=True)
+    foods = serializers.PrimaryKeyRelatedField(many=True, queryset=Food.objects.all())
+    drinks = serializers.PrimaryKeyRelatedField(many=True, queryset=Drink.objects.all())
+    services = serializers.PrimaryKeyRelatedField(many=True, queryset=Service.objects.all())
 
     # def get_user(self, feedback):
     #     return UserSerializer(feedback.user, context={"request": self.context.get('request')}).data
@@ -183,6 +195,11 @@ class WeddingBookingSerializer(serializers.ModelSerializer):
         model = WeddingBooking
         fields = ['id', 'name', 'description', 'table_quantity', 'rental_date', 'payment_method', 'payment_status',
                   'total_price', 'created_date', 'event_type', 'customer', 'foods', 'drinks', 'services']
+
+    def validate_foods(self, value):
+        if len(value) < 5:
+            raise serializers.ValidationError("Phải có ít nhất 5 món ăn.")
+        return value
 
 
 class FeedbackSerializer(serializers.ModelSerializer):

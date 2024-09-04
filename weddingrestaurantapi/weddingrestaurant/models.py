@@ -21,7 +21,8 @@ class User(AbstractUser):  # Người dùng
 
     def save(self, *args, **kwargs):
         if not self.pk and self.is_superuser:
-            self.user_role = UserRole.objects.get(name='admin')
+            admin_role, created = UserRole.objects.get_or_create(name='admin')
+            self.user_role = admin_role
         super().save(*args, **kwargs)
 
 

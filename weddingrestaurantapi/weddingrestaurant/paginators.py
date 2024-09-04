@@ -7,3 +7,7 @@ class BasePaginator(pagination.PageNumberPagination):
 
 class HallPaginator(pagination.PageNumberPagination):
     page_size = 4
+
+
+class FoodPaginator(pagination.PageNumberPagination):
+    page_size = 6
