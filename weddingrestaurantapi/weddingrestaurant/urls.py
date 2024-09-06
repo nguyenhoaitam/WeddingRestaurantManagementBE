@@ -22,5 +22,5 @@ r.register('feedbacks', views.FeedbackViewSet, 'feedbacks')
 urlpatterns = [
     path('', include(r.urls)),
     path('momo/payment/', views.payment_view, name='payment'),
-    path('zalo/payment/', views.create_payment, name='zalopay'),
+    path('zalopay/payment/', views.create_payment, name='zalopay'),
 ]

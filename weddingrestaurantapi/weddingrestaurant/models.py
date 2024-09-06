@@ -152,6 +152,7 @@ class WeddingBooking(models.Model):  # Đơn đặt tiệc
     payment_status = models.CharField(max_length=50)
     total_price = models.FloatField()
     created_date = models.DateTimeField(auto_now_add=True)
+    wedding_hall = models.ForeignKey(WeddingHall, on_delete=models.SET_NULL, null=True)
     event_type = models.ForeignKey(EventType, on_delete=models.SET_NULL, null=True)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     foods = models.ManyToManyField('Food', through='FoodBookingDetail')

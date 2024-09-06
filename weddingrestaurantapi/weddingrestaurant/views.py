@@ -159,6 +159,7 @@ class WeddingHallViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retrie
 
         # Lọc theo tên
         if q:
+            q = q.strip()
             queryset = queryset.filter(name__icontains=q)
 
         # Lọc theo buổi
@@ -248,6 +249,7 @@ class WeddingHallViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retrie
 #
 #             # Lọc theo tên
 #             if q:
+#                 q = q.strip()
 #                 queryset = queryset.filter(name__icontains=q)
 #
 #             # Lọc theo buổi
@@ -335,20 +337,32 @@ class EventTypeViewSet(viewsets.ViewSet, generics.ListAPIView):
 class ServiceViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Service.objects.filter(is_active=True)
     serializer_class = serializers.ServiceSerializer
+    pagination_class = paginators.FoodDrinkServicePaginator
 
     def get_queryset(self):
         queryset = self.queryset
 
         if self.action.__eq__('list'):
             q = self.request.query_params.get('q')
+
             if q:
+                q = q.strip()
                 queryset = queryset.filter(name__icontains=q)
+
+            order_by = self.request.query_params.get('order_by')
+            if order_by:
+                if order_by == 'asc':
+                    queryset = queryset.order_by('price')
+                elif order_by == 'desc':
+                    queryset = queryset.order_by('-price')
+
         return queryset
 
 
 class DrinkViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Drink.objects.filter(is_active=True)
     serializer_class = serializers.DrinkSerializer
+    pagination_class = paginators.FoodDrinkServicePaginator
 
     def get_queryset(self):
         queryset = self.queryset
@@ -356,6 +370,7 @@ class DrinkViewSet(viewsets.ViewSet, generics.ListAPIView):
         if self.action.__eq__('list'):
             q = self.request.query_params.get('q')
             if q:
+                q = q.strip()
                 queryset = queryset.filter(name__icontains=q)
 
             order_by = self.request.query_params.get('order_by')
@@ -383,6 +398,7 @@ class FoodTypeViewSet(viewsets.ViewSet, generics.ListAPIView):
     #
     #     q = request.query_params.get('q')
     #     if q:
+    #         q = q.strip()
     #         foods = foods.filter(name__icontains=q)
     #
     #     serialized_foods = serializers.FoodSerializer(foods, many=True, context={"request": request})
@@ -392,7 +408,7 @@ class FoodTypeViewSet(viewsets.ViewSet, generics.ListAPIView):
 class FoodViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Food.objects.filter(is_active=True)
     serializer_class = serializers.FoodSerializer
-    # pagination_class = paginators.FoodPaginator
+    pagination_class = paginators.FoodDrinkServicePaginator
 
     def get_queryset(self):
         queryset = self.queryset
@@ -400,6 +416,7 @@ class FoodViewSet(viewsets.ViewSet, generics.ListAPIView):
         if self.action.__eq__('list'):
             q = self.request.query_params.get('q')
             if q:
+                q = q.strip()
                 queryset = queryset.filter(name__icontains=q)
 
             foodtype_id = self.request.query_params.get('foodtype_id')
@@ -451,8 +468,7 @@ def payment_view(request: HttpRequest):
     redirectUrl = 'https://webhook.site/b3088a6a-2d17-4f8d-a383-71389a6c600b'
     ipnUrl = 'https://webhook.site/b3088a6a-2d17-4f8d-a383-71389a6c600b'
     requestType = "payWithMethod"
-    # amount = request.headers.get('amount', '')  # Lấy amount từ header  (Số tiền)
-    amount = '5000'
+    amount = request.headers.get('amount', '')  # Lấy amount từ header (Lấy giá từ header)
     orderId = partnerCode + str(int(time.time() * 1000))
     requestId = orderId
     extraData = ''
@@ -505,7 +521,7 @@ config = {
 def create_payment(request):
     if request.method == 'POST':
         # Lấy thông tin từ yêu cầu của người dùng
-        amount = request.headers.get('amount', '')  # Lấy amount từ header (lấy giá)
+        amount = request.headers.get('amount', '')  # Lấy amount từ header (lấy giá từ header)
         transID = random.randrange(1000000)
         # Xây dựng yêu cầu thanh toán
         order = {
@@ -515,8 +531,7 @@ def create_payment(request):
             "app_time": int(round(time.time() * 1000)),  # miliseconds
             "embed_data": json.dumps({}),
             "item": json.dumps([{}]),
-            # "amount": amount,
-            "amount": '50000',
+            "amount": amount,
             "description": "Thanh Toán Đơn Đặt Tiệc #" + str(transID),
             "bank_code": "",
         }
@@ -532,6 +547,6 @@ def create_payment(request):
             result = json.loads(response.read())
             return JsonResponse(result)
         except Exception as e:
-            return JsonResponse({"error": str(e)})
+            return JsonResponse({"Lỗi": str(e)})
     else:
-        return JsonResponse({"error": "Only POST requests are allowed"})
+        return JsonResponse({"Lỗi": "Chỉ yêu cầu POST được cho phép"})
