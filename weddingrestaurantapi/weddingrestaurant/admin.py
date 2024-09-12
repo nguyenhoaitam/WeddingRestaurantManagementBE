@@ -93,7 +93,7 @@ class MyServiceAdmin(admin.ModelAdmin):
 
 
 class MyDrinkAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'price', 'description', 'image', 'is_active']
+    list_display = ['id', 'name', 'price', 'description', 'unit', 'image', 'is_active']
     search_fields = ['name']
     list_filter = ['is_active']
     readonly_fields = ['drink_image']

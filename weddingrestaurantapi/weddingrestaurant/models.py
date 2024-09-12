@@ -122,6 +122,7 @@ class Service(BaseModel):  # Dịch vụ
 
 class Drink(BaseModel):  # Nước uống
     name = models.CharField(max_length=50, null=False)
+    unit = models.CharField(max_length=50)  # Đơn vị tính
 
     def __str__(self):
         return self.name
@@ -148,6 +149,7 @@ class WeddingBooking(models.Model):  # Đơn đặt tiệc
     description = RichTextField(null=True, blank=True)
     table_quantity = models.IntegerField()
     rental_date = models.DateField()
+    time_of_day = models.CharField(max_length=20)
     payment_method = models.CharField(max_length=50, null=False)
     payment_status = models.CharField(max_length=50)
     total_price = models.FloatField()
@@ -191,7 +193,6 @@ class ServiceBookingDetail(models.Model):  # Chi tiết dịch vụ của đơn 
 
 class DrinkBookingDetail(models.Model):  # Chi tiết nước uống của đơn đặt tiệc
     quantity = models.IntegerField(null=False)
-    unit = models.CharField(max_length=50)
     drink = models.ForeignKey(Drink, on_delete=models.CASCADE)
     wedding_booking = models.ForeignKey(WeddingBooking, on_delete=models.PROTECT)
 

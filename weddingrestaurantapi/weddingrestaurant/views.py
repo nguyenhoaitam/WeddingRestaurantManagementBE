@@ -137,7 +137,7 @@ class CustomerViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPI
 
 
 class WeddingHallViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
-    queryset = WeddingHall.objects.filter(is_active=True).order_by('name')
+    queryset = WeddingHall.objects.filter(is_active=True).order_by('name').prefetch_related('weddinghallprice_set')
     serializer_class = serializers.WeddingHallSerializer
     pagination_class = paginators.HallPaginator
 
@@ -188,38 +188,35 @@ class WeddingHallViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retrie
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
 
-        # Lấy giá cho từng sảnh tiệc
+        event_date = request.query_params.get('event_date')
+        time = request.query_params.get('time')
+        is_weekend_event = False
+
+        if event_date:
+            event_date = datetime.fromisoformat(event_date)
+            is_weekend_event = event_date.weekday() >= 5  # Xác định nếu là cuối tuần
+        else:
+            event_date = timezone.now()
+            is_weekend_event = event_date.weekday() >= 5
+
+        price_queryset = WeddingHallPrice.objects.filter(
+            wedding_hall__in=queryset,
+            is_weekend=is_weekend_event
+        )
+        if time:
+            price_queryset = price_queryset.filter(time=time)
+
+        price_data = serializers.WeddingHallPriceSerializer(price_queryset, many=True).data
+        price_dict = {}
+        for price in price_data:
+            hall_id = price['wedding_hall']
+            if hall_id not in price_dict:
+                price_dict[hall_id] = []
+            price_dict[hall_id].append(price)
+
+        # Gán giá vào từng sảnh
         for hall in serializer.data:
-            event_date = request.query_params.get('event_date')
-            time = request.query_params.get('time')
-            is_weekend_event = False
-
-            if event_date:
-                event_date = datetime.fromisoformat(event_date)
-                is_weekend_event = event_date.weekday() >= 5  # Xác định nếu là cuối tuần
-            else:
-                event_date = timezone.now()
-                is_weekend_event = event_date.weekday() >= 5
-
-            # Lọc giá theo buổi và ngày
-            if time:
-                hall['prices'] = serializers.WeddingHallPriceSerializer(
-                    WeddingHallPrice.objects.filter(
-                        wedding_hall=hall['id'],
-                        is_weekend=is_weekend_event,
-                        time=time
-                    ),
-                    many=True
-                ).data
-            else:
-                # Nếu không có time, lấy tất cả giá cho ngày hiện tại
-                hall['prices'] = serializers.WeddingHallPriceSerializer(
-                    WeddingHallPrice.objects.filter(
-                        wedding_hall=hall['id'],
-                        is_weekend=is_weekend_event
-                    ),
-                    many=True
-                ).data
+            hall['prices'] = price_dict.get(hall['id'], [])
 
         return Response(serializer.data)
 
@@ -328,6 +325,37 @@ class WeddingHallPriceViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = WeddingHallPrice.objects.all()
     serializer_class = serializers.WeddingHallPriceSerializer
 
+    def get_queryset(self):
+        queryset = self.queryset
+
+        # Lấy các tham số từ request
+        hall_id = self.request.query_params.get('hall_id')
+        time_of_day = self.request.query_params.get('time_of_day')
+        event_date = self.request.query_params.get('event_date')
+
+        # Nếu không có tham số nào, trả về tất cả giá
+        if not hall_id and not time_of_day and not event_date:
+            return queryset
+
+        # Kiểm tra nếu có cung cấp hall_id
+        if hall_id:
+            queryset = queryset.filter(wedding_hall_id=hall_id)
+
+        # Kiểm tra nếu có cung cấp time_of_day
+        if time_of_day:
+            queryset = queryset.filter(time=time_of_day)
+
+        # Kiểm tra nếu có cung cấp event_date
+        if event_date:
+            try:
+                event_date = timezone.datetime.fromisoformat(event_date)
+                is_weekend = event_date.weekday() >= 5  # 5 là thứ Bảy, 6 là Chủ Nhật
+                queryset = queryset.filter(is_weekend=is_weekend)
+            except ValueError:
+                return WeddingHallPrice.objects.none()  # Trả về queryset rỗng nếu ngày không hợp lệ
+
+        return queryset
+
 
 class EventTypeViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = EventType.objects.all()
@@ -335,7 +363,7 @@ class EventTypeViewSet(viewsets.ViewSet, generics.ListAPIView):
 
 
 class ServiceViewSet(viewsets.ViewSet, generics.ListAPIView):
-    queryset = Service.objects.filter(is_active=True)
+    queryset = Service.objects.filter(is_active=True).order_by('id')
     serializer_class = serializers.ServiceSerializer
     pagination_class = paginators.FoodDrinkServicePaginator
 
@@ -360,7 +388,7 @@ class ServiceViewSet(viewsets.ViewSet, generics.ListAPIView):
 
 
 class DrinkViewSet(viewsets.ViewSet, generics.ListAPIView):
-    queryset = Drink.objects.filter(is_active=True)
+    queryset = Drink.objects.filter(is_active=True).order_by('id')
     serializer_class = serializers.DrinkSerializer
     pagination_class = paginators.FoodDrinkServicePaginator
 
@@ -384,7 +412,7 @@ class DrinkViewSet(viewsets.ViewSet, generics.ListAPIView):
 
 
 class FoodTypeViewSet(viewsets.ViewSet, generics.ListAPIView):
-    queryset = FoodType.objects.all()
+    queryset = FoodType.objects.all().order_by('id')
     serializer_class = serializers.FoodTypeSerializer
 
     # @action(methods=['get'], detail=True, url_path='foods')
@@ -406,7 +434,7 @@ class FoodTypeViewSet(viewsets.ViewSet, generics.ListAPIView):
 
 
 class FoodViewSet(viewsets.ViewSet, generics.ListAPIView):
-    queryset = Food.objects.filter(is_active=True)
+    queryset = Food.objects.filter(is_active=True).order_by('id')
     serializer_class = serializers.FoodSerializer
     pagination_class = paginators.FoodDrinkServicePaginator
 
