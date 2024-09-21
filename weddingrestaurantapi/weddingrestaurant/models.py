@@ -197,7 +197,7 @@ class DrinkBookingDetail(models.Model):  # Chi tiết nước uống của đơn
     wedding_booking = models.ForeignKey(WeddingBooking, on_delete=models.PROTECT)
 
 
-class FoodBookingDetail(models.Model): # Chi tiết đồ ăn của đơn đặt tiệc
+class FoodBookingDetail(models.Model):  # Chi tiết đồ ăn của đơn đặt tiệc
     quantity = models.IntegerField(null=False)
     food = models.ForeignKey(Food, on_delete=models.CASCADE)
     wedding_booking = models.ForeignKey(WeddingBooking, on_delete=models.PROTECT)

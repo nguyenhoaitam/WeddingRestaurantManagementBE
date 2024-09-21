@@ -9,7 +9,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from weddingrestaurant import paginators
 from weddingrestaurant.models import User, UserRole, Staff, WeddingHall, WeddingHallImage, WeddingHallPrice, EventType, \
-    Service, Drink, FoodType, Food, WeddingBooking, Feedback, Customer
+    Service, Drink, FoodType, Food, WeddingBooking, Feedback, Customer, FoodBookingDetail, DrinkBookingDetail, \
+    ServiceBookingDetail
 from weddingrestaurant import serializers
 from django.http import HttpResponse, HttpRequest, JsonResponse
 
@@ -134,6 +135,23 @@ class StaffViewSet(viewsets.ViewSet, generics.ListAPIView):
 class CustomerViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView):
     queryset = Staff.objects.all()
     serializer_class = serializers.CustomerSerializer
+
+    def get_permissions(self):
+        if self.action in ['get_wedding_bookings']:
+            return [permissions.IsAuthenticated(), ]
+
+        return [permissions.AllowAny(), ]
+
+    @action(detail=True, methods=['get'], url_path='wedding_bookings')
+    def get_wedding_bookings(self, request, pk=None):  # Sử dụng pk thay vì customer_id
+        try:
+            customer = Customer.objects.select_related('user').get(pk=pk)  # Lấy khách hàng theo pk
+            bookings = WeddingBooking.objects.filter(customer=customer).prefetch_related('foods', 'drinks',
+                                                                                         'services')  # Tối ưu hóa các quan hệ ManyToMany
+            serializer = serializers.WeddingBookingSerializer(bookings, many=True)
+            return Response(serializer.data)
+        except Customer.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
 
 class WeddingHallViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
@@ -415,23 +433,6 @@ class FoodTypeViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = FoodType.objects.all().order_by('id')
     serializer_class = serializers.FoodTypeSerializer
 
-    # @action(methods=['get'], detail=True, url_path='foods')
-    # def get_foods(self, request, pk=None):
-    #     try:
-    #         food_type = FoodType.objects.get(pk=pk)
-    #     except FoodType.DoesNotExist:
-    #         return Response(status=status.HTTP_404_NOT_FOUND)
-    #
-    #     foods = food_type.food_set.filter(is_active=True)
-    #
-    #     q = request.query_params.get('q')
-    #     if q:
-    #         q = q.strip()
-    #         foods = foods.filter(name__icontains=q)
-    #
-    #     serialized_foods = serializers.FoodSerializer(foods, many=True, context={"request": request})
-    #     return Response(serialized_foods.data, status=status.HTTP_200_OK)
-
 
 class FoodViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Food.objects.filter(is_active=True).order_by('id')
@@ -464,7 +465,74 @@ class FoodViewSet(viewsets.ViewSet, generics.ListAPIView):
 class WeddingBookingViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView, generics.DestroyAPIView):
     queryset = WeddingBooking.objects.all()
     serializer_class = serializers.WeddingBookingSerializer
-    parser_classes = [parsers.MultiPartParser]
+
+    def create(self, request):
+        name = request.data.get('name')
+        description = request.data.get('description')
+        table_quantity = request.data.get('table_quantity')
+        rental_date = request.data.get('rental_date')
+        time_of_day = request.data.get('time_of_day')
+        payment_method = request.data.get('payment_method')
+        payment_status = request.data.get('payment_status')
+        total_price = request.data.get('total_price')
+        wedding_hall = request.data.get('wedding_hall')
+        customer = request.data.get('customer')
+        event_type = request.data.get('event_type')
+
+        foods = request.data.get("foods", [])
+        drinks = request.data.get("drinks", [])
+        services = request.data.get("services", [])
+
+        if not name or not table_quantity or not rental_date or not payment_method or not payment_status or not total_price:
+            return Response(data='Thiếu thông tin bắt buộc', status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            wedding_booking = WeddingBooking.objects.create(
+                name=name,
+                description=description,
+                table_quantity=table_quantity,
+                rental_date=rental_date,
+                time_of_day=time_of_day,
+                payment_method=payment_method,
+                payment_status=payment_status,
+                total_price=total_price,
+                wedding_hall=WeddingHall.objects.get(id=wedding_hall),
+                customer=Customer.objects.get(user_id=customer),
+                event_type=EventType.objects.get(id=event_type)
+            )
+
+            for food in foods:
+                food_instance = Food.objects.get(id=food['food'])
+                food_booking_detail = FoodBookingDetail.objects.create(
+                    food=food_instance,
+                    quantity=food['quantity'],
+                    wedding_booking=wedding_booking
+                )
+                serializers.FoodBookingDetailSerializer(food_booking_detail)
+
+            for drink in drinks:
+                drink_instance = Drink.objects.get(id=drink['drink'])
+                drink_booking_detail = DrinkBookingDetail.objects.create(
+                    drink=drink_instance,
+                    quantity=drink['quantity'],
+                    wedding_booking=wedding_booking
+                )
+                serializers.DrinkBookingDetailSerializer(drink_booking_detail)
+
+            for service in services:
+                service_instance = Service.objects.get(id=service['service'])
+                service_booking_detail = ServiceBookingDetail.objects.create(
+                    service=service_instance,
+                    quantity=service['quantity'],
+                    wedding_booking=wedding_booking
+                )
+                serializers.ServiceBookingDetailSerializer(service_booking_detail)
+
+            serialized_wedding_booking = serializers.WeddingBookingSerializer(wedding_booking)
+            return Response(serialized_wedding_booking.data, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response(data=str(e), status=status.HTTP_400_BAD_REQUEST)
 
 
 class FeedbackViewSet(viewsets.ViewSet, generics.ListAPIView, generics.DestroyAPIView):

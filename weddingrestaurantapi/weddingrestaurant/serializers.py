@@ -1,8 +1,8 @@
 from rest_framework import serializers
-from rest_framework.utils import representation
 
 from weddingrestaurant.models import User, UserRole, Staff, Customer, WeddingHall, WeddingHallImage, WeddingHallPrice, \
-    EventType, Service, FoodType, Food, Drink, WeddingBooking, Feedback
+    EventType, Service, FoodType, Food, Drink, WeddingBooking, Feedback, FoodBookingDetail, DrinkBookingDetail, \
+    ServiceBookingDetail
 
 
 class ItemSerializer(serializers.ModelSerializer):
@@ -88,12 +88,6 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class WeddingHallImageSerializer(serializers.ModelSerializer):
-
-    # def to_representation(self, instance):
-    #     rep = super().to_representation(instance)
-    #     rep['path'] = instance.path.url
-    #
-    #     return rep
     def to_representation(self, instance):
         rep = super().to_representation(instance)
 
@@ -183,13 +177,43 @@ class FoodSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class FoodBookingDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FoodBookingDetail
+        fields = ['food', 'quantity']
+
+
+class DrinkBookingDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DrinkBookingDetail
+        fields = ['drink', 'quantity']
+
+
+class ServiceBookingDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ServiceBookingDetail
+        fields = ['service', 'quantity']
+
+
 class WeddingBookingSerializer(serializers.ModelSerializer):
-    foods = serializers.PrimaryKeyRelatedField(many=True, queryset=Food.objects.all())
-    drinks = serializers.PrimaryKeyRelatedField(many=True, queryset=Drink.objects.all())
-    services = serializers.PrimaryKeyRelatedField(many=True, queryset=Service.objects.all())
+    foods = serializers.SerializerMethodField()
+    drinks = serializers.SerializerMethodField()
+    services = serializers.SerializerMethodField()
 
     # def get_user(self, feedback):
     #     return UserSerializer(feedback.user, context={"request": self.context.get('request')}).data
+
+    def get_foods(self, obj):
+        foods_queryset = obj.foodbookingdetail_set.all()
+        return FoodBookingDetailSerializer(foods_queryset, many=True).data
+
+    def get_drinks(self, obj):
+        drinks_queryset = obj.drinkbookingdetail_set.all()
+        return DrinkBookingDetailSerializer(drinks_queryset, many=True).data
+
+    def get_services(self, obj):
+        services_queryset = obj.servicebookingdetail_set.all()
+        return ServiceBookingDetailSerializer(services_queryset, many=True).data
 
     class Meta:
         model = WeddingBooking
