@@ -69,9 +69,16 @@ class UserSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         data = validated_data.copy()
+
+        user_role_name = data.pop('user_role', None)
+
         user = User(**data)
         user.set_password(user.password)
         user.save()
+
+        if user_role_name:
+            user.user_role = UserRole.objects.get(name=user_role_name)
+            user.save()
 
         return user
 
@@ -227,11 +234,12 @@ class WeddingBookingSerializer(serializers.ModelSerializer):
 
 
 class FeedbackSerializer(serializers.ModelSerializer):
-    user = serializers.SerializerMethodField()
+    customer = serializers.SerializerMethodField()
 
-    def get_user(self, feedback):
-        return UserSerializer(feedback.user, context={"request": self.context.get('request')}).data
+    def get_customer(self, feedback):
+        return CustomerSerializer(feedback.customer, context={"request": self.context.get('request')}).data
 
     class Meta:
         model = Feedback
-        fields = ['id', 'content', 'rating', 'created_date', 'updated_date', 'user']
+        fields = ['id', 'content', 'rating', 'created_date', 'updated_date', 'customer']
+

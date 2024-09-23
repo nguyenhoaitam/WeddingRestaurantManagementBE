@@ -24,7 +24,7 @@ SECRET_KEY = 'django-insecure-^nw_u-z1$47=&-&px3ma%1j#kx719l!ir6ieegwf*8$%5t*npd
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.1.12']
+ALLOWED_HOSTS = ['192.168.1.11']
 
 OAUTH2_PROVIDER = {'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.JSONOAuthLibCore'}
 
@@ -52,7 +52,7 @@ CORS_ALLOW_HEADERS = [
     'amount',  # Thêm header này vào danh sách
 ]
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_METHODS = ['GET', 'POST', 'PUT', 'DELETE']
+CORS_ALLOW_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 CORS_ALLOW_ALL_ORIGINS = True
 
 REST_FRAMEWORK = {

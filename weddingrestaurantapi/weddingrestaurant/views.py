@@ -44,7 +44,7 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
         try:
             user_role = UserRole.objects.get(name='customer')
-            user_data['user_role'] = user_role.id
+            user_data['user_role'] = user_role.name
         except UserRole.DoesNotExist:
             return Response({"Thông báo": "Không tìm thấy UserRole Customer"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -535,23 +535,39 @@ class WeddingBookingViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.L
             return Response(data=str(e), status=status.HTTP_400_BAD_REQUEST)
 
 
-class FeedbackViewSet(viewsets.ViewSet, generics.ListAPIView, generics.DestroyAPIView):
+class FeedbackViewSet(viewsets.ModelViewSet):
     queryset = Feedback.objects.all()
     serializer_class = serializers.FeedbackSerializer
-    parser_classes = [parsers.MultiPartParser]
 
     def get_permissions(self):
-        if self.action == 'create':
+        if self.action in ['create', 'update', 'destroy']:
             return [permissions.IsAuthenticated()]
-
         return [permissions.AllowAny()]
 
     def create(self, request):
-        serializer = self.serializer_class(data=request.data)
+        wedding_booking_id = request.data.get('wedding_booking_id')
+
+        if wedding_booking_id is None:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.serializer_class(data=request.data, context={'request': request})
         if serializer.is_valid():
-            serializer.save(customer=request.user)
+            customer = Customer.objects.get(user=request.user)
+            serializer.save(customer=customer, wedding_booking_id=wedding_booking_id)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # Momo
