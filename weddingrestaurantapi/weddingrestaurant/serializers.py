@@ -224,8 +224,9 @@ class WeddingBookingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WeddingBooking
-        fields = ['id', 'name', 'description', 'table_quantity', 'rental_date', 'payment_method', 'payment_status',
-                  'total_price', 'created_date', 'event_type', 'customer', 'foods', 'drinks', 'services']
+        fields = ['id', 'name', 'description', 'table_quantity', 'rental_date', 'time_of_day', 'payment_method',
+                  'payment_status', 'total_price', 'created_date', 'event_type', 'customer', 'foods', 'drinks',
+                  'services']
 
     def validate_foods(self, value):
         if len(value) < 5:
@@ -242,4 +243,3 @@ class FeedbackSerializer(serializers.ModelSerializer):
     class Meta:
         model = Feedback
         fields = ['id', 'content', 'rating', 'created_date', 'updated_date', 'customer']
-

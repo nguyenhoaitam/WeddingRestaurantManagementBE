@@ -143,11 +143,11 @@ class CustomerViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPI
         return [permissions.AllowAny(), ]
 
     @action(detail=True, methods=['get'], url_path='wedding_bookings')
-    def get_wedding_bookings(self, request, pk=None):  # Sử dụng pk thay vì customer_id
+    def get_wedding_bookings(self, request, pk=None):
         try:
-            customer = Customer.objects.select_related('user').get(pk=pk)  # Lấy khách hàng theo pk
+            customer = Customer.objects.select_related('user').get(pk=pk)
             bookings = WeddingBooking.objects.filter(customer=customer).prefetch_related('foods', 'drinks',
-                                                                                         'services')  # Tối ưu hóa các quan hệ ManyToMany
+                                                                                         'services')
             serializer = serializers.WeddingBookingSerializer(bookings, many=True)
             return Response(serializer.data)
         except Customer.DoesNotExist:
@@ -237,6 +237,38 @@ class WeddingHallViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retrie
             hall['prices'] = price_dict.get(hall['id'], [])
 
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], url_path='check-booking-status')
+    def check_booking_status(self, request):
+        rental_date = request.query_params.get('rental_date')
+        time_of_day = request.query_params.get('time_of_day')
+        wedding_hall_id = request.query_params.get('wedding_hall_id')
+
+        if not rental_date or not time_of_day or not wedding_hall_id:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            rental_date = datetime.fromisoformat(rental_date)
+        except ValueError:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            wedding_hall = WeddingHall.objects.get(id=wedding_hall_id)
+        except WeddingHall.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        is_booked = WeddingBooking.objects.filter(
+            wedding_hall=wedding_hall,
+            rental_date=rental_date,
+            time_of_day=time_of_day
+        ).exists()
+
+        return Response({
+            "wedding_hall_id": wedding_hall_id,
+            "rental_date": rental_date.date(),
+            "time_of_day": time_of_day,
+            "is_booked": is_booked
+        }, status=status.HTTP_200_OK)
 
 
 #  Có phân trang
