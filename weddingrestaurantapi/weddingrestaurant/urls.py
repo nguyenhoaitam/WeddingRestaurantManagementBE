@@ -18,6 +18,7 @@ r.register('food_types', views.FoodTypeViewSet, 'food_type')
 r.register('foods', views.FoodViewSet, 'foods')
 r.register('wedding_bookings', views.WeddingBookingViewSet, 'wedding_bookings')
 r.register('feedbacks', views.FeedbackViewSet, 'feedbacks')
+r.register('statistics', views.StatisticsViewSet, 'statistics')
 
 urlpatterns = [
     path('', include(r.urls)),

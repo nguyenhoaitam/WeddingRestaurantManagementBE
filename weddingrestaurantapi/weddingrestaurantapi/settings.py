@@ -24,7 +24,7 @@ SECRET_KEY = 'django-insecure-^nw_u-z1$47=&-&px3ma%1j#kx719l!ir6ieegwf*8$%5t*npd
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.1.11']
+ALLOWED_HOSTS = ['192.168.1.12']
 
 OAUTH2_PROVIDER = {'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.JSONOAuthLibCore'}
 

@@ -3,6 +3,7 @@ import urllib
 from datetime import datetime
 
 from django.contrib.auth.hashers import make_password
+from django.db.models import Count, Sum
 from django.utils import timezone
 from rest_framework import viewsets, generics, parsers, permissions, status
 from rest_framework.decorators import action
@@ -602,6 +603,139 @@ class FeedbackViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class StatisticsViewSet(viewsets.ViewSet):
+
+    @action(detail=False, methods=['get'], url_path='monthly-density')
+    def monthly_density(self, request):
+        year = request.query_params.get('year', timezone.now().year)
+
+        # Lấy dữ liệu thống kê theo tháng
+        density_data = (
+            WeddingBooking.objects
+            .filter(rental_date__year=year)
+            .values('rental_date__month')
+            .annotate(count=Count('id'))
+            .order_by('rental_date__month')
+        )
+
+        # Khởi tạo báo cáo mật độ tháng
+        density_report = []
+        for month in range(1, 13):
+            month_data = next((entry for entry in density_data if entry['rental_date__month'] == month), None)
+            total_density = month_data['count'] if month_data else 0
+            density_report.append({
+                'month': month,
+                'total_density': total_density,
+            })
+
+        return Response({'monthly_density': density_report}, status=200)
+
+    @action(detail=False, methods=['get'], url_path='quarterly-density')
+    def quarterly_density(self, request):
+        year = request.query_params.get('year', timezone.now().year)
+        quarterly_density = []
+
+        for quarter in range(1, 5):
+            start_month = (quarter - 1) * 3 + 1
+            end_month = start_month + 2
+
+            total_density = WeddingBooking.objects.filter(
+                rental_date__year=year,
+                rental_date__month__gte=start_month,
+                rental_date__month__lte=end_month
+            ).count()
+
+            quarterly_density.append({
+                'quarter': quarter,
+                'total_density': total_density
+            })
+
+        return Response({'quarterly_density': quarterly_density}, status=200)
+
+    @action(detail=False, methods=['get'], url_path='yearly-density')
+    def yearly_density(self, request):
+        density_data = (
+            WeddingBooking.objects
+            .values('rental_date__year')
+            .annotate(total_density=Count('id'))
+            .order_by('rental_date__year')
+        )
+
+        yearly_density = []
+        for entry in density_data:
+            yearly_density.append({
+                'year': entry['rental_date__year'],
+                'total_density': entry['total_density']
+            })
+
+        return Response({'yearly_density': yearly_density}, status=200)
+
+    @action(detail=False, methods=['get'], url_path='monthly-revenue')
+    def monthly_revenue(self, request):
+        year = request.query_params.get('year', timezone.now().year)
+
+        # Lấy dữ liệu thống kê doanh thu theo tháng
+        revenue_data = (
+            WeddingBooking.objects
+            .filter(rental_date__year=year)
+            .values('rental_date__month')
+            .annotate(total_revenue=Sum('total_price'))
+            .order_by('rental_date__month')
+        )
+
+        # Khởi tạo báo cáo doanh thu tháng
+        revenue_report = []
+        for month in range(1, 13):
+            month_data = next((entry for entry in revenue_data if entry['rental_date__month'] == month), None)
+            total_revenue = month_data['total_revenue'] if month_data else 0
+            revenue_report.append({
+                'month': month,
+                'total_revenue': total_revenue,
+            })
+
+        return Response({'monthly_revenue': revenue_report}, status=200)
+
+    @action(detail=False, methods=['get'], url_path='quarterly-revenue')
+    def quarterly_revenue(self, request):
+        year = request.query_params.get('year', timezone.now().year)
+        quarterly_revenue = []
+
+        for quarter in range(1, 5):
+            start_month = (quarter - 1) * 3 + 1
+            end_month = start_month + 2
+
+            total_revenue = WeddingBooking.objects.filter(
+                rental_date__year=year,
+                rental_date__month__gte=start_month,
+                rental_date__month__lte=end_month
+            ).aggregate(total=Sum('total_price'))['total'] or 0
+
+            quarterly_revenue.append({
+                'quarter': quarter,
+                'total_revenue': total_revenue
+            })
+
+        return Response({'quarterly_revenue': quarterly_revenue}, status=200)
+
+    @action(detail=False, methods=['get'], url_path='yearly-revenue')
+    def yearly_revenue(self, request):
+        revenue_data = (
+            WeddingBooking.objects
+            .values('rental_date__year')
+            .annotate(total_revenue=Sum('total_price'))
+            .order_by('rental_date__year')
+        )
+
+        yearly_revenue = []
+        for entry in revenue_data:
+            yearly_revenue.append({
+                'year': entry['rental_date__year'],
+                'total_revenue': entry['total_revenue'] or 0
+            })
+
+        return Response({'yearly_revenue': yearly_revenue}, status=200)
+
+
 # Momo
 @csrf_exempt
 def payment_view(request: HttpRequest):
@@ -676,7 +810,7 @@ def create_payment(request):
             "embed_data": json.dumps({}),
             "item": json.dumps([{}]),
             "amount": amount,
-            "description": "Thanh Toán Đơn Đặt Tiệc #" + str(transID),
+            "description": "Thanh Toán Hóa Đơn #" + str(transID),
             "bank_code": "",
         }
 
