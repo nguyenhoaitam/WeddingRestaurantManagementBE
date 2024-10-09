@@ -157,6 +157,7 @@ class WeddingBooking(models.Model):  # Đơn đặt tiệc
     wedding_hall = models.ForeignKey(WeddingHall, on_delete=models.SET_NULL, null=True)
     event_type = models.ForeignKey(EventType, on_delete=models.SET_NULL, null=True)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    staff = models.ForeignKey(Staff, on_delete=models.CASCADE, null=True)
     foods = models.ManyToManyField('Food', through='FoodBookingDetail')
     drinks = models.ManyToManyField('Drink', through='DrinkBookingDetail')
     services = models.ManyToManyField('Service', through='ServiceBookingDetail')

@@ -206,6 +206,7 @@ class WeddingBookingSerializer(serializers.ModelSerializer):
     foods = serializers.SerializerMethodField()
     drinks = serializers.SerializerMethodField()
     services = serializers.SerializerMethodField()
+    # staff = serializers.PrimaryKeyRelatedField(queryset=Staff.objects.all(), required=False)
 
     # def get_user(self, feedback):
     #     return UserSerializer(feedback.user, context={"request": self.context.get('request')}).data
@@ -224,8 +225,8 @@ class WeddingBookingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WeddingBooking
-        fields = ['id', 'name', 'description', 'table_quantity', 'rental_date', 'time_of_day', 'payment_method',
-                  'payment_status', 'total_price', 'created_date', 'event_type', 'customer', 'foods', 'drinks',
+        fields = ['id', 'name', 'description', 'wedding_hall', 'table_quantity', 'rental_date', 'time_of_day', 'payment_method',
+                  'payment_status', 'total_price', 'created_date', 'event_type', 'customer', 'staff', 'foods', 'drinks',
                   'services']
 
     def validate_foods(self, value):
@@ -242,4 +243,4 @@ class FeedbackSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Feedback
-        fields = ['id', 'content', 'rating', 'created_date', 'updated_date', 'customer']
+        fields = ['id', 'content', 'rating', 'created_date', 'updated_date', 'wedding_booking', 'customer']

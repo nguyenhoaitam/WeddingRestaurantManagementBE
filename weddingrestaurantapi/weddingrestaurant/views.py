@@ -1,6 +1,5 @@
 import hashlib
 import urllib
-from datetime import datetime
 
 from django.contrib.auth.hashers import make_password
 from django.db.models import Count, Sum
@@ -8,7 +7,7 @@ from django.utils import timezone
 from rest_framework import viewsets, generics, parsers, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from weddingrestaurant import paginators
+from weddingrestaurant import paginators, perms
 from weddingrestaurant.models import User, UserRole, Staff, WeddingHall, WeddingHallImage, WeddingHallPrice, EventType, \
     Service, Drink, FoodType, Food, WeddingBooking, Feedback, Customer, FoodBookingDetail, DrinkBookingDetail, \
     ServiceBookingDetail
@@ -131,6 +130,23 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
 class StaffViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Staff.objects.all()
     serializer_class = serializers.StaffSerializer
+
+    def get_permissions(self):
+        if self.action in ['get_wedding_bookings']:
+            return [permissions.IsAuthenticated(), ]
+
+        return [permissions.AllowAny(), ]
+
+    @action(detail=True, methods=['get'], url_path='wedding_bookings')
+    def get_wedding_bookings(self, request, pk=None):
+        try:
+            staff = Staff.objects.select_related('user').get(pk=pk)
+            bookings = WeddingBooking.objects.filter(staff=staff).prefetch_related('foods', 'drinks',
+                                                                                         'services')
+            serializer = serializers.WeddingBookingSerializer(bookings, many=True)
+            return Response(serializer.data)
+        except Customer.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
 
 class CustomerViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView):
@@ -270,7 +286,6 @@ class WeddingHallViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retrie
             "time_of_day": time_of_day,
             "is_booked": is_booked
         }, status=status.HTTP_200_OK)
-
 
 #  Có phân trang
 # class WeddingHallViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
@@ -495,9 +510,14 @@ class FoodViewSet(viewsets.ViewSet, generics.ListAPIView):
         return queryset
 
 
-class WeddingBookingViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView, generics.DestroyAPIView):
+class WeddingBookingViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView, generics.RetrieveAPIView, generics.DestroyAPIView):
     queryset = WeddingBooking.objects.all()
     serializer_class = serializers.WeddingBookingSerializer
+
+    # def get_permissions(self):
+    #     if self.action in ['partial_update']:
+    #         return [perms.IsStaff]
+    #     return [permissions.AllowAny()]
 
     def create(self, request):
         name = request.data.get('name')
@@ -531,7 +551,8 @@ class WeddingBookingViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.L
                 total_price=total_price,
                 wedding_hall=WeddingHall.objects.get(id=wedding_hall),
                 customer=Customer.objects.get(user_id=customer),
-                event_type=EventType.objects.get(id=event_type)
+                event_type=EventType.objects.get(id=event_type),
+                staff=None
             )
 
             for food in foods:
@@ -567,10 +588,85 @@ class WeddingBookingViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.L
         except Exception as e:
             return Response(data=str(e), status=status.HTTP_400_BAD_REQUEST)
 
+    def partial_update(self, request, pk=None):
+        try:
+            wedding_booking = self.get_object()
+
+            name = request.data.get('name')
+            if name is not None:
+                wedding_booking.name = name
+
+            description = request.data.get('description')
+            if description is not None:
+                wedding_booking.description = description
+
+            table_quantity = request.data.get('table_quantity')
+            if table_quantity is not None:
+                wedding_booking.table_quantity = table_quantity
+
+            rental_date = request.data.get('rental_date')
+            if rental_date is not None:
+                wedding_booking.rental_date = rental_date
+
+            time_of_day = request.data.get('time_of_day')
+            if time_of_day is not None:
+                wedding_booking.time_of_day = time_of_day
+
+            payment_method = request.data.get('payment_method')
+            if payment_method is not None:
+                wedding_booking.payment_method = payment_method
+
+            payment_status = request.data.get('payment_status')
+            if payment_status is not None:
+                wedding_booking.payment_status = payment_status
+
+            total_price = request.data.get('total_price')
+            if total_price is not None:
+                wedding_booking.total_price = total_price
+
+            wedding_hall = request.data.get('wedding_hall')
+            if wedding_hall is not None:
+                wedding_booking.wedding_hall = WeddingHall.objects.get(id=wedding_hall)
+
+            customer = request.data.get('customer')
+            if customer is not None:
+                wedding_booking.customer = Customer.objects.get(user_id=customer)
+
+            event_type = request.data.get('event_type')
+            if event_type is not None:
+                wedding_booking.event_type = EventType.objects.get(id=event_type)
+
+            staff = request.data.get('staff')
+            if staff is not None:
+                wedding_booking.staff = Staff.objects.get(user_id=staff)
+
+            wedding_booking.save()
+
+            serialized_wedding_booking = serializers.WeddingBookingSerializer(wedding_booking)
+            return Response(serialized_wedding_booking.data, status=status.HTTP_200_OK)
+
+        except WeddingBooking.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response(data=str(e), status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['get'], url_path='feedbacks')
+    def get_feedbacks(self, request, pk=None):
+        try:
+            wedding_booking = self.get_object()
+            feedbacks = Feedback.objects.filter(wedding_booking=wedding_booking)
+
+            feedback_serializer = serializers.FeedbackSerializer(feedbacks, many=True)
+            return Response(feedback_serializer.data, status=status.HTTP_200_OK)
+        except WeddingBooking.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
 
 class FeedbackViewSet(viewsets.ModelViewSet):
     queryset = Feedback.objects.all()
     serializer_class = serializers.FeedbackSerializer
+    pagination_class = paginators.BasePaginator
+    parser_classes = [parsers.MultiPartParser]
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'destroy']:
@@ -578,7 +674,7 @@ class FeedbackViewSet(viewsets.ModelViewSet):
         return [permissions.AllowAny()]
 
     def create(self, request):
-        wedding_booking_id = request.data.get('wedding_booking_id')
+        wedding_booking_id = request.data.get('wedding_booking')
 
         if wedding_booking_id is None:
             return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -604,6 +700,7 @@ class FeedbackViewSet(viewsets.ModelViewSet):
 
 
 class StatisticsViewSet(viewsets.ViewSet):
+    permission_classes = [perms.IsAdmin]
 
     @action(detail=False, methods=['get'], url_path='monthly-density')
     def monthly_density(self, request):
